@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 4 – DC Chopper | Blended Classroom</title>
+<style>
+*{box-sizing:border-box} body{margin:0;font-family:Arial,sans-serif;background:#08111f;color:#eaf2ff}
+.app{max-width:1180px;margin:auto;padding:24px}.top{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:18px}
+h1{margin:0;font-size:28px}.muted{color:#9eb0c8}.badge{padding:8px 12px;border-radius:20px;background:#10243d;border:1px solid #23476d;font-size:13px}
+.layout{display:grid;grid-template-columns:280px 1fr;gap:18px}.card{background:#0d1a2b;border:1px solid #203852;border-radius:16px;padding:18px;box-shadow:0 8px 25px #0004}
+.roadmap .item{padding:12px;margin:8px 0;border-radius:10px;border:1px solid #1d3855;cursor:pointer}
+.item.active{border-color:#56b4ff;background:#102a44}.item.locked{opacity:.45;cursor:not-allowed}.item.done{border-color:#35c98b}
+.num{display:inline-flex;width:27px;height:27px;border-radius:50%;align-items:center;justify-content:center;background:#183452;margin-right:8px;font-size:12px}
+.progress{height:8px;background:#14283e;border-radius:8px;overflow:hidden;margin:10px 0 18px}.bar{height:100%;width:0;background:#4eb5ff}
+.timer{font-size:42px;font-weight:bold;text-align:center;margin:12px 0;color:#fff}.timer.ready{color:#55d89c}
+button,.btn{border:0;border-radius:10px;padding:11px 15px;background:#2f9de8;color:white;font-weight:bold;cursor:pointer;text-decoration:none;display:inline-block}
+button:disabled{opacity:.35;cursor:not-allowed}.secondary{background:#17304a}.green{background:#1e9c70}.danger{background:#8f4051}
+.actions{display:flex;gap:10px;flex-wrap:wrap}.video{border:1px solid #29435e;border-radius:12px;padding:15px;margin:12px 0;background:#0a1524}
+.video h3{margin:0 0 7px}.video small{color:#9eb0c8}.q{margin:15px 0}.q label{display:block;margin:8px 0;padding:10px;background:#102239;border-radius:8px;cursor:pointer}
+label{display:block;font-size:12px;color:#9eb0c8;margin-bottom:5px}input[type=text]{width:100%;padding:12px;border-radius:9px;border:1px solid #2b4865;background:#081522;color:white}
+.notice{padding:12px;border-radius:10px;background:#10263b;border-left:4px solid #4eb5ff;margin:12px 0}
+.footer{margin-top:18px;text-align:center;color:#8195ae;font-size:12px}
+@media(max-width:800px){.layout{grid-template-columns:1fr}.top{flex-direction:column;align-items:flex-start}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div><h1>CHAPTER 4: DC CHOPPER</h1><div class="muted">Self-Learning • Blended Classroom</div></div>
+    <div class="actions">
+  <button id="modeBtn" class="secondary" onclick="requestLecturerAccess('mode')">🎓 STUDENT MODE</button>
+  <button id="gateBtn" class="secondary" onclick="requestLecturerAccess('gate')">🔒 STRICT GATE</button>
+  <button class="secondary" onclick="requestLecturerAccess('dashboard')">📊 LECTURER DASHBOARD</button>
+</div>
+  </div>
+  <div id="modeNotice" class="notice">🎓 <b>STUDENT MODE:</b> Complete the task and wait for the allocated time to reach 00:00 before moving to the next activity.</div>
+  <div id="studentPanel" class="card" style="margin-bottom:18px;border-color:#315b82">
+    <h3 style="margin-top:0">👨‍🎓 STUDENT INFORMATION</h3>
+    <p class="muted">Enter your information before starting Chapter 4. Your learning data will be saved with this profile.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div><label>Student ID</label><input id="studentId" type="text" placeholder="e.g. PSMEA001"></div>
+      <div><label>Name</label><input id="studentName" type="text" placeholder="Your name"></div>
+      <div><label>Class</label><input id="studentClass" type="text" placeholder="e.g. PSME A0"></div>
+    </div>
+    <div class="actions" style="margin-top:12px"><button class="green" onclick="startStudentSession()">▶ START CHAPTER 4</button><span id="studentStatus" class="muted" style="align-self:center"></span></div>
+  </div>
+
+  <div class="layout">
+    <aside class="card roadmap">
+      <b>LEARNING ROADMAP</b>
+      <div class="progress"><div id="bar" class="bar"></div></div>
+      <div id="roadmap"></div>
+    </aside>
+
+    <main class="card">
+      <div id="content"></div>
+    </main>
+  </div>
+  <div class="footer">Prototype — Chapter 4 DC Chopper • Student data collection enabled</div>
+<div id="lecturerAuth" style="display:none;position:fixed;inset:0;background:#06101ccc;z-index:30;align-items:center;justify-content:center;padding:20px">
+ <div class="card" style="width:min(420px,100%);border-color:#315b82">
+  <h2 style="margin-top:0">🔐 Lecturer Access</h2>
+  <p class="muted">Enter the lecturer password to access Lecturer Tools.</p>
+  <label>Password</label>
+  <input id="lecturerPassword" type="password" inputmode="numeric" maxlength="6" placeholder="Enter password" onkeydown="if(event.key==='Enter')submitLecturerAccess()">
+  <div id="authMsg" class="muted" style="margin-top:10px;min-height:18px"></div>
+  <div class="actions" style="margin-top:12px;justify-content:flex-end">
+   <button class="secondary" onclick="closeLecturerAuth()">CANCEL</button>
+   <button class="green" onclick="submitLecturerAccess()">UNLOCK</button>
+  </div>
+ </div>
+</div>
+<div id="dashboard" style="display:none;position:fixed;inset:0;background:#06101ccc;z-index:20;overflow:auto;padding:30px">
+ <div style="max-width:1100px;margin:auto;background:#0d1a2b;border:1px solid #29435e;border-radius:18px;padding:24px;box-shadow:0 20px 60px #0008">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:15px"><div><h2 style="margin:0">📊 LECTURER DASHBOARD</h2><div class="muted">Chapter 4 • DC Chopper</div></div><button class="secondary" onclick="closeDashboard()">✕ CLOSE</button></div>
+  <div id="dashContent" style="margin-top:20px"></div>
+ </div>
+</div>
+</div>
+
+<script>
+const activities=[
+  {id:'start',title:'START HERE',mins:3},
+ {id:'watch1',title:'WATCH 1 • Introduction to Choppers',mins:10},
+ {id:'watch2',title:'WATCH 2 • Chopper Control Techniques',mins:10},
+ {id:'watch3',title:'WATCH 3 • Principle of Step Down Chopper',mins:10},
+ {id:'watch4',title:'WATCH 4 • Principle of Step Up Chopper',mins:10},
+ {id:'explore',title:'EXPLORE',mins:5},
+ {id:'calc',title:'CALCULATE',mins:5},
+ {id:'check',title:'CHECK',mins:3},
+ {id:'reflect',title:'REFLECT',mins:2},
+ {id:'wrap',title:'WRAP UP',mins:2}
+];
+const videos={
+watch1:['Introduction to Choppers','https://www.youtube.com/watch?v=7YWlqJn1i-4','What is a DC chopper? How does switching control the average DC output?'],
+watch2:['Chopper Control Techniques','https://www.youtube.com/watch?v=gZfUpLEk2rY','What is duty cycle and how is it related to TON and TOFF?'],
+watch3:['Principle of Step Down Chopper','https://www.youtube.com/watch?v=YRtExI37dt0','For a buck chopper, what happens to average output voltage when duty cycle increases?'],
+watch4:['Principle of Step Up Chopper','https://www.youtube.com/watch?v=D3Td9v1fezc','How does a boost chopper produce an output voltage greater than the input?']
+};
+let idx=0, remain=activities[0].mins*60, taskDone=false, opened=false, videoOpened=false, interval=null, timerStartedAt=0, timerEndAt=0;
+let selfCheckState=[];
+let done=Array(activities.length).fill(false);
+let testMode=false;
+let gateEnabled=true;
+let sessionStarted=false;
+let chapterCompleted=false;
+let student={id:'',name:'',className:'',startedAt:''};
+let lecturerAction=null;
+const LECTURER_PASSWORD='085195';
+// Paste your deployed Google Apps Script Web App URL here after Step 2.
+const DATA_ENDPOINT='https://script.google.com/macros/s/AKfycbyj6UmDtX3G245bcKxyCWzn9rXAFZWfB9m3DZ3XMGlue96CuP8q0W1S1OuyzGw-Jug/exec';
+
+function startStudentSession(){
+  const id=document.getElementById('studentId').value.trim();
+  const name=document.getElementById('studentName').value.trim();
+  const className=document.getElementById('studentClass').value.trim();
+  const msg=document.getElementById('studentStatus');
+  if(!id||!name||!className){msg.textContent='Please complete Student ID, Name and Class.';msg.style.color='#ffcc66';return;}
+  student={id,name,className,startedAt:new Date().toISOString()};
+  localStorage.setItem('dcChopperStudent',JSON.stringify(student));
+  msg.textContent='Profile saved ✓';msg.style.color='#55d89c';
+  sessionStarted=true;
+  idx=0; done=Array(activities.length).fill(false); chapterCompleted=false;
+  render();
+  resetTimer();
+  document.getElementById('studentId').disabled=true;
+  document.getElementById('studentName').disabled=true;
+  document.getElementById('studentClass').disabled=true;
+}
+function loadStudentSession(){
+  const saved=JSON.parse(localStorage.getItem('dcChopperStudent')||'null');
+  if(!saved)return;
+  // Load the saved profile for convenience, but DO NOT start the chapter/timer automatically.
+  sessionStarted=false;
+  student=saved;
+  ['studentId','studentName','studentClass'].forEach((id,i)=>{const el=document.getElementById(id);if(el){el.value=[student.id,student.name,student.className][i];el.disabled=false;}});
+  const msg=document.getElementById('studentStatus');if(msg){msg.textContent='Profile loaded ✓ — press START CHAPTER 4 to begin the timer.';msg.style.color='#55d89c';}
+  const startBtn=document.querySelector('button[onclick="startStudentSession()"]');
+  if(startBtn) startBtn.disabled=false;
+}
+function buildStudentRecord(){
+  const reflection=JSON.parse(localStorage.getItem('dcChopperReflection')||'null');
+  const wrap=JSON.parse(localStorage.getItem('dcChopperWrap')||'null');
+  return {
+    studentId:student.id,name:student.name,className:student.className,chapter:'Chapter 4 - DC Chopper',
+    progress:Math.round(done.filter(Boolean).length/activities.length*100)+'%',
+    checkScore:localStorage.getItem('dcChopperScore')||'',
+    appEffectiveness:reflection?.effectiveness||'',mainDifficulty:reflection?.difficulty||'',
+    reflection:reflection?.reflection||'',improvement:reflection?.improve||'',
+    exitTicket:wrap?.takeaway||'',syncQuestion:wrap?.question||'',
+    completedDate:new Date().toISOString()
+  };
+}
+async function saveStudentResult(){
+  const msg=document.getElementById('saveResultMsg');
+  if(!student.id){msg.textContent='Please enter Student Information first.';msg.style.color='#ffcc66';return;}
+  const record=buildStudentRecord();
+  localStorage.setItem('dcChopperLastRecord',JSON.stringify(record));
+  if(!DATA_ENDPOINT){
+    msg.innerHTML='✅ Result prepared and saved on this device. <b>Next:</b> connect the Google Apps Script endpoint to send it to your shared Google Sheet.';msg.style.color='#55d89c';return;
+  }
+  msg.textContent='Saving result to class database…';
+  try{
+    const res=await fetch(DATA_ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(record)});
+    const out=await res.text();
+    msg.textContent='☁️ Result saved to Google Sheet ✓';msg.style.color='#55d89c';
+  }catch(err){
+    msg.textContent='Could not reach the shared sheet. Your result is still saved on this device.';msg.style.color='#ff9a9a';
+  }
+}
+function requestLecturerAccess(action){
+  lecturerAction=action;
+  const modal=document.getElementById('lecturerAuth');
+  const input=document.getElementById('lecturerPassword');
+  const msg=document.getElementById('authMsg');
+  if(msg) msg.textContent='';
+  if(input) input.value='';
+  if(modal) modal.style.display='flex';
+  setTimeout(()=>input?.focus(),50);
+}
+function closeLecturerAuth(){
+  const modal=document.getElementById('lecturerAuth');
+  if(modal) modal.style.display='none';
+  lecturerAction=null;
+}
+function submitLecturerAccess(){
+  const input=document.getElementById('lecturerPassword');
+  const msg=document.getElementById('authMsg');
+  if(!input || input.value!==LECTURER_PASSWORD){
+    if(msg){msg.textContent='Incorrect password.';msg.style.color='#ff9a9a';}
+    return;
+  }
+  const action=lecturerAction;
+  closeLecturerAuth();
+  if(action==='gate') toggleGate();
+  else if(action==='mode') toggleMode();
+  else if(action==='dashboard') openDashboard();
+}
+function toggleGate(){
+  gateEnabled=!gateEnabled;
+  const b=document.getElementById('gateBtn');
+  b.textContent=gateEnabled?'🔒 STRICT GATE':'🔓 FREE NAVIGATION';
+  document.getElementById('modeNotice').innerHTML = gateEnabled
+    ? '🎓 <b>STRICT GATE:</b> Activities are locked until the task and allocated time are complete.'
+    : '🛠️ <b>DEVELOPMENT MODE:</b> Navigation is unlocked. You can jump between activities while we build and test the content.';
+  renderRoadmap();
+  updateTimer();
+}
+function toggleMode(){
+  testMode=!testMode;
+  const b=document.getElementById('modeBtn');
+  b.textContent=testMode?'🧪 TEST MODE':'🎓 STUDENT MODE';
+  document.getElementById('modeNotice').innerHTML = gateEnabled
+    ? (testMode ? '🧪 <b>TEST + STRICT GATE:</b> Timer can be skipped, but task/time gating remains active.' : '🎓 <b>STUDENT + STRICT GATE:</b> Task and allocated time must be completed before moving on.')
+    : '🛠️ <b>DEVELOPMENT MODE:</b> Navigation is unlocked. You can jump between activities while we build and test the content.';
+  const s=document.getElementById('skipBtn');
+  if(s)s.style.display=testMode?'inline-block':'none';
+}
+function skipTimer(){
+  if(!testMode)return;
+  timerEndAt=Date.now();
+  remain=0;
+  updateTimer();
+}
+
+function renderRoadmap(){
+ const r=document.getElementById('roadmap');
+ r.innerHTML=activities.map((a,i)=>{
+  const locked=gateEnabled && i>0 && !done[i-1];
+  return `<div class="item ${i===idx?'active ':''}${done[i]?'done ':''}${locked?'locked':''}" onclick="${locked?'':`go(${i})`}">
+   <span class="num">${i+1}</span><b>${a.title}</b><br><small>${done[i]?'COMPLETED':locked?'LOCKED':'AVAILABLE'} • ${a.mins} min</small>
+  </div>`;
+ }).join('');
+ document.getElementById('bar').style.width=(done.filter(Boolean).length/activities.length*100)+'%';
+}
+function resetTimer(){
+ clearInterval(interval);
+ const durationSec=activities[idx].mins*60;
+ // Absolute end time keeps the timer running while the student views YouTube
+ // or when the browser throttles this tab in the background.
+ timerStartedAt=Date.now();
+ timerEndAt=timerStartedAt + (durationSec*1000)/(testMode?10:1);
+ remain=durationSec;
+ taskDone=false; opened=false; videoOpened=false; selfCheckState=[];
+ updateTimer();
+ interval=setInterval(updateTimer,250);
+}
+function syncTimer(){
+ if(!sessionStarted || !timerEndAt)return;
+ const multiplier=testMode?10:1;
+ const left=Math.max(0, Math.ceil((timerEndAt-Date.now())/1000*multiplier));
+ remain=Math.min(activities[idx].mins*60,left);
+}
+window.addEventListener('focus',()=>{syncTimer();updateTimer();});
+document.addEventListener('visibilitychange',()=>{syncTimer();updateTimer();});
+function updateTimer(){
+ const el=document.getElementById('timer'); if(!el)return;
+ if(!sessionStarted){
+   el.textContent='START';
+   el.className='timer';
+   const b=document.getElementById('completeBtn');
+   if(b)b.disabled=true;
+   return;
+ }
+ syncTimer();
+ const m=Math.floor(remain/60),s=remain%60;
+ el.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+ el.className='timer '+(remain===0?'ready':'');
+ const b=document.getElementById('completeBtn');
+ if(b)b.disabled = gateEnabled ? !(remain===0 && taskDone) : false;
+ if(b)b.textContent = gateEnabled ? 'COMPLETE & UNLOCK NEXT' : 'SAVE & GO NEXT';
+}
+function go(i){if(!sessionStarted||chapterCompleted)return;if(gateEnabled && i>0&&!done[i-1])return;idx=i;render();resetTimer()}
+function markTask(){
+  taskDone=true;
+  opened=true;
+  const s=document.getElementById('taskStatus');
+  if(s) s.textContent='TASK COMPLETED ✓';
+  updateTimer();
+}
+function complete(){
+ if(!sessionStarted||chapterCompleted)return;
+ if(gateEnabled && (remain!==0||!taskDone))return;
+ done[idx]=true;
+ if(idx<activities.length-1){
+   idx++;
+   render();
+   resetTimer();
+ }else{
+   chapterCompleted=true;
+   clearInterval(interval);
+   renderCompletion();
+ }
+}
+function renderCompletion(){
+  renderRoadmap();
+  const c=document.getElementById('content');
+  c.innerHTML=`
+   <div style="text-align:center;padding:30px 10px">
+    <div style="font-size:64px;margin-bottom:8px">🎉</div>
+    <h2 style="font-size:32px;margin:8px 0">CHAPTER 4 COMPLETED</h2>
+    <p class="muted">DC Chopper • Blended Classroom</p>
+    <div class="notice" style="text-align:left;margin:24px 0">
+      <b>Congratulations!</b><br>
+      You have completed all learning activities for Chapter 4: DC Chopper.
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:left">
+      <div class="card"><div class="muted">Activities</div><h2>10/10</h2><div class="muted">Completed</div></div>
+      <div class="card"><div class="muted">CHECK</div><h2>${localStorage.getItem('dcChopperScore')||'—'}</h2><div class="muted">Final assessment</div></div>
+      <div class="card"><div class="muted">Reflection</div><h2>${localStorage.getItem('dcChopperReflection')?'✓':'—'}</h2><div class="muted">Submitted</div></div>
+    </div>
+    <div class="actions" style="justify-content:center;margin-top:24px">
+      <button class="green" onclick="saveStudentResult()">☁️ SAVE MY RESULT</button>
+      <button class="secondary" onclick="openDashboard()">📊 VIEW LECTURER DASHBOARD</button>
+      <button class="secondary" onclick="location.reload()">↻ REVIEW CHAPTER</button>
+    </div>
+    <p id="saveResultMsg" class="muted" style="margin-top:14px"></p>
+    <div class="notice" style="text-align:left;margin-top:18px">💡 <b>Simple pilot setup:</b> Student only enters ID, Name and Class once. At the end, press <b>SAVE MY RESULT</b>. The app collects the Chapter 4 results in one record.</div>
+    </div>
+    <p class="muted" style="margin-top:20px">Next: Chapter 5 will be available here when added to the course roadmap.</p>
+   </div>`;
+  updateTimer();
+}
+function render(){
+ renderRoadmap();
+ const a=activities[idx], c=document.getElementById('content');
+ let body='';
+ if(idx===0) body=`
+  <h2>START HERE</h2>
+  <p class="muted">Welcome to Chapter 4: DC Chopper. Take a few minutes to understand what you will learn before starting the activities.</p>
+  <div class="notice" style="line-height:1.65">
+    <h3 style="margin-top:0">📘 Chapter Introduction</h3>
+    <p>A <b>DC chopper</b> is a power electronic circuit used to control the average DC output voltage from a fixed DC source. It achieves this by switching a semiconductor device rapidly between <b>ON</b> and <b>OFF</b> states.</p>
+    <p>In this chapter, you will explore how <b>switching</b> and <b>duty cycle</b> affect the output voltage, and you will be introduced to <b>Buck, Boost and Buck-Boost</b> chopper configurations.</p>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h3>🎯 Learning Outcomes</h3>
+    <p>By the end of this chapter, you should be able to:</p>
+    <ul style="line-height:1.8;margin-bottom:0">
+      <li>Explain the operating principle of a DC chopper.</li>
+      <li>Explain the relationship between switching and duty cycle.</li>
+      <li>Identify Buck, Boost and Buck-Boost chopper configurations.</li>
+      <li>Calculate duty cycle and average output voltage for a simple chopper.</li>
+    </ul>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h3>🧠 Prior Knowledge Check</h3>
+    <p>Before you begin, think about this question:</p>
+    <div class="notice">How can a fixed DC source produce a controlled average DC output voltage?</div>
+    <div class="q">
+      <label><input type="radio" name="s" onclick="markTask()"> By rapidly switching the semiconductor switch ON and OFF</label>
+      <label><input type="radio" name="s"> By changing the DC source itself</label>
+    </div>
+  </div>`;
+ else if(idx>=1&&idx<=4){
+  const v=videos[a.id];
+  const watchData={
+    watch1:{
+      qs:[
+        'What is the main function of a DC chopper?',
+        'Why is a semiconductor switch used instead of continuously varying the DC source?',
+        'What happens to the output when the switch is repeatedly turned ON and OFF?'
+      ],
+      checks:[
+        {q:'A DC chopper is mainly used to:',c:['Convert AC to DC','Control DC voltage using switching','Increase frequency of AC','Convert DC to AC'],a:1},
+        {q:'Why is a semiconductor switch suitable for a chopper?',c:['It allows rapid ON/OFF switching','It always keeps the output constant','It converts AC directly to DC','It eliminates the need for a load'],a:0},
+        {q:'Repeated ON/OFF switching is used to control the:',c:['AC frequency only','Average DC output voltage','Input source frequency','Transformer turns ratio'],a:1}
+      ]
+    },
+    watch2:{
+      qs:[
+        'What is duty cycle?',
+        'What is the relationship between TON, TOFF and T?',
+        'What happens to the average output voltage when duty cycle increases in a buck chopper?'
+      ],
+      checks:[
+        {q:'Duty cycle D is defined as:',c:['TOFF/T','TON/T','T/TON','TON/TOFF'],a:1},
+        {q:'For one switching period, which relationship is correct?',c:['T = TON − TOFF','T = TON × TOFF','T = TON + TOFF','T = TON/TOFF'],a:2},
+        {q:'For an ideal buck chopper, increasing D generally:',c:['Decreases average output voltage','Increases average output voltage','Makes output zero','Has no effect'],a:1}
+      ]
+    },
+    watch3:{
+      qs:[
+        'Why is the circuit called a step-down chopper?',
+        'What happens to the load voltage during the ON period?',
+        'What happens during the OFF period?',
+        'What is the relationship between D and Vo(avg)?'
+      ],
+      checks:[
+        {q:'Why is a buck chopper called a step-down chopper?',c:['Vo can be greater than Vin','Vo(avg) is lower than Vin for 0 < D < 1','It converts DC to AC','It increases switching frequency'],a:1},
+        {q:'During the ON period of an ideal buck chopper, the load is connected to:',c:['The DC source','Ground only','An AC source','No source'],a:0},
+        {q:'During the OFF period, the main switch is:',c:['Always conducting','Open/off','Shorted permanently','Replaced by a transformer'],a:1},
+        {q:'For an ideal buck chopper, the average output voltage is:',c:['Vo = Vin/D','Vo = D Vin','Vo = Vin + D','Vo = Vin/D²'],a:1}
+      ]
+    },
+    watch4:{
+      qs:[
+        'How does a boost chopper produce an output voltage higher than the input?',
+        'What happens to the inductor during the ON period?',
+        'What happens when the switch is OFF?',
+        'What happens to output voltage when duty cycle increases?'
+      ],
+      checks:[
+        {q:'A boost chopper is mainly used to:',c:['Step down DC voltage','Step up DC voltage','Convert DC to AC','Convert AC to DC'],a:1},
+        {q:'During the ON period, the inductor mainly:',c:['Stores energy','Stops all current permanently','Converts DC to AC','Removes the load'],a:0},
+        {q:'When the switch is OFF, stored inductor energy is:',c:['Transferred toward the output','Destroyed','Converted into AC frequency','Disconnected from the circuit permanently'],a:0},
+        {q:'For an ideal boost converter, increasing D generally:',c:['Decreases output voltage','Increases output voltage','Makes output equal to zero','Has no effect'],a:1}
+      ]
+    }
+  }[a.id];
+
+  body=`<h2>${a.title}</h2>
+  <div class="video"><h3>🎥 ${v[0]}</h3><small>${v[2]}</small><br><br>
+  <a class="btn" href="${v[1]}" target="_blank" onclick="openWatchVideo()">▶ OPEN YOUTUBE VIDEO</a>
+  <p id="videoStatus" class="muted">VIDEO NOT OPENED</p></div>
+
+  <div class="notice"><b>📝 GUIDED QUESTIONS</b><br>Use these questions while watching. Students can write short notes in their notebook or answer mentally before attempting the Self-Check.</div>
+  <div class="q">${watchData.qs.map((q,i)=>`<div style="margin:10px 0;padding:10px;background:#102239;border-radius:8px"><b>Q${i+1}.</b> ${q}</div>`).join('')}</div>
+
+  <div class="notice"><b>✅ SELF-CHECK — ${watchData.checks.length} QUESTIONS</b><br>Answer <b>all</b> questions correctly. You may retry any incorrect answer.</div>
+  <div class="q">${watchData.checks.map((item,i)=>`
+    <div style="margin:16px 0;padding:12px;background:#0b1726;border:1px solid #203852;border-radius:10px">
+      <b>Q${i+1}.</b> ${item.q}
+      ${item.c.map((x,j)=>`<label><input type="radio" name="sc${i}" value="${j}" onchange="checkWatchAnswer(${i},${j},${item.a},${watchData.checks.length})"> ${String.fromCharCode(65+j)}. ${x}</label>`).join('')}
+      <div id="scMsg${i}" class="muted">Not answered</div>
+    </div>`).join('')}</div>
+  <p id="checkStatus" class="muted">SELF-CHECK: 0 / ${watchData.checks.length} CORRECT</p>
+  <p id="taskStatus" class="muted">TASK REQUIREMENTS: Open video + All Self-Check questions correct + Timer complete</p>`;
+} else if(idx===5) body=`
+  <h2>🔍 EXPLORE — See How Switching Changes the Output</h2>
+  <p class="muted">Interact with the controls. Observe what happens before moving to the calculation activity.</p>
+
+  <div class="notice">
+    <b>1️⃣ DUTY CYCLE EXPLORER</b><br>
+    Move the slider and observe the average output voltage of an ideal buck chopper.
+  </div>
+
+  <div class="card" style="background:#081522;margin:12px 0">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+      <b>Vin = 100 V</b><b id="dutyValue">D = 50%</b>
+    </div>
+    <input id="dutySlider" type="range" min="20" max="80" value="50" step="10"
+           style="width:100%;margin:18px 0" oninput="updateExplorer()">
+    <div class="muted">20% &nbsp;&nbsp;&nbsp;&nbsp; 40% &nbsp;&nbsp;&nbsp;&nbsp; 60% &nbsp;&nbsp;&nbsp;&nbsp; 80%</div>
+    <div style="margin-top:18px;text-align:center">
+      <div class="muted">AVERAGE OUTPUT VOLTAGE</div>
+      <div id="exploreVo" style="font-size:38px;font-weight:bold;margin:5px 0">50 V</div>
+      <div id="exploreObservation" class="notice">As duty cycle increases, average output voltage increases.</div>
+    </div>
+  </div>
+
+  <div class="notice">
+    <b>2️⃣ ON / OFF VISUALISATION</b><br>
+    Observe how the switch changes state during one switching period.
+  </div>
+  <div class="card" style="background:#081522;margin:12px 0;text-align:center">
+    <div id="switchState" style="font-size:18px;font-weight:bold;margin-bottom:10px">SWITCH: ON</div>
+    <svg id="squareWaveSvg" viewBox="0 0 700 190" width="100%" role="img" aria-label="Animated square wave whose TON changes with duty cycle">
+      <line x1="45" y1="135" x2="665" y2="135" stroke="#64748b" stroke-width="2"/>
+      <line x1="45" y1="25" x2="45" y2="150" stroke="#64748b" stroke-width="2"/>
+      <text x="20" y="32" fill="#94a3b8" font-size="14">ON</text>
+      <text x="20" y="142" fill="#94a3b8" font-size="14">OFF</text>
+
+      <path id="squareWave" d="" fill="none" stroke="#55d89c" stroke-width="6" stroke-linejoin="round"/>
+      <line id="waveCursor" x1="45" y1="20" x2="45" y2="150" stroke="#ffffff" stroke-width="3"/>
+
+      <line id="tonBracket" x1="45" y1="165" x2="355" y2="165" stroke="#55d89c" stroke-width="3"/>
+      <line id="toffBracket" x1="355" y1="165" x2="665" y2="165" stroke="#4eb5ff" stroke-width="3"/>
+      <text id="tonLabel" x="200" y="184" text-anchor="middle" fill="#55d89c" font-size="14">TON</text>
+      <text id="toffLabel" x="510" y="184" text-anchor="middle" fill="#4eb5ff" font-size="14">TOFF</text>
+    </svg>
+    <div class="muted" style="margin:4px 0 12px">The moving cursor shows the switch state during one switching period.</div>
+    <button id="waveBtn" class="secondary" type="button" onclick="toggleWave()">⏸ PAUSE</button>
+  </div>
+
+  <div class="notice">
+    <b>3️⃣ BUCK vs BOOST</b><br>
+    Compare the input and output voltage.
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="card" style="background:#081522">
+      <h3>🔽 BUCK</h3>
+      <p>Vin = 100 V</p><p>D = 0.5</p>
+      <div class="notice">Vo = D Vin = <b>50 V</b></div>
+      <small class="muted">Output &lt; Input</small>
+    </div>
+    <div class="card" style="background:#081522">
+      <h3>🔼 BOOST</h3>
+      <p>Vin = 100 V</p><p>D = 0.5</p>
+      <div class="notice">Vo = Vin/(1−D) = <b>200 V</b></div>
+      <small class="muted">Output &gt; Input</small>
+    </div>
+  </div>
+
+  <div class="notice">
+    <b>⚡ QUICK CHALLENGE</b><br>
+    A buck chopper has Vin = 200 V. If D increases from 30% to 60%, what happens to Vo(avg)?
+  </div>
+  <div class="q">
+    <label><input type="radio" name="exploreChallenge" value="1" onchange="checkExploreChallenge()"> A. 60 V → 120 V</label>
+    <label><input type="radio" name="exploreChallenge" value="0"> B. 120 V → 60 V</label>
+    <label><input type="radio" name="exploreChallenge" value="0"> C. Remains at 200 V</label>
+    <label><input type="radio" name="exploreChallenge" value="0"> D. Cannot be determined</label>
+  </div>
+  <p id="exploreStatus" class="muted">QUICK CHALLENGE NOT COMPLETED</p>
+  <p id="taskStatus" class="muted">TASK REQUIREMENT: Explore the slider + complete Quick Challenge + Timer complete</p>`;
+ else if(idx===6) body=`
+  <h2>CALCULATE</h2>
+  <p class="muted">Apply the chopper equations. Complete all 3 levels.</p>
+  <div class="notice"><b>LEVEL 1 — FIND DUTY CYCLE</b><br>
+  A buck chopper has <b>Vin = 200 V</b> and <b>Vo = 80 V</b>. Calculate the duty cycle, D.<br>
+  <small>Hint: D = Vo / Vin</small></div>
+  <input id="calc1" type="number" placeholder="Enter D in %">
+  <button onclick="checkCalcLevel(1)">CHECK</button>
+  <p id="calcMsg1" class="muted"></p>
+
+  <div class="notice"><b>LEVEL 2 — FIND OUTPUT VOLTAGE</b><br>
+  A buck chopper operates from a <b>150 V</b> DC source with <b>D = 40%</b>. Calculate Vo(avg).<br>
+  <small>Hint: Vo = D × Vin</small></div>
+  <input id="calc2" type="number" placeholder="Enter Vo in volts">
+  <button onclick="checkCalcLevel(2)">CHECK</button>
+  <p id="calcMsg2" class="muted"></p>
+
+  <div class="notice"><b>LEVEL 3 — CHANGE THE DUTY CYCLE</b><br>
+  A buck chopper has <b>Vin = 200 V</b>. Duty cycle increases from <b>30%</b> to <b>60%</b>.<br>
+  Calculate the initial Vo, new Vo, and the increase in Vo.<br>
+  <small>Enter three values: Initial Vo, New Vo, Increase</small></div>
+  <div class="row"><input id="calc3a" type="number" placeholder="Initial Vo (V)">
+  <input id="calc3b" type="number" placeholder="New Vo (V)">
+  <input id="calc3c" type="number" placeholder="Increase (V)"></div>
+  <button onclick="checkCalcLevel(3)">CHECK LEVEL 3</button>
+  <p id="calcMsg3" class="muted"></p>
+  <p id="taskStatus" class="muted">TASK REQUIREMENT: Complete all 3 calculation levels.</p>`;
+ else if(idx===7) body=`
+  <h2>CHECK</h2>
+  <p>Test your understanding of the key concepts in Chapter 4. Choose one answer for each question.</p>
+  <div class="notice"><b>MINIMUM PASS: 4 / 5</b><br>You may retry if your score is below 4.</div>
+  <div class="q">
+    <p><b>Q1. What is the main function of a DC chopper?</b></p>
+    <label><input type="radio" name="c1" value="0"> A. Convert AC to DC</label>
+    <label><input type="radio" name="c1" value="1"> B. Control DC output voltage using switching</label>
+    <label><input type="radio" name="c1" value="0"> C. Increase AC frequency</label>
+    <label><input type="radio" name="c1" value="0"> D. Convert DC to AC</label>
+  </div>
+  <div class="q">
+    <p><b>Q2. Which parameter mainly determines the average output voltage of a chopper?</b></p>
+    <label><input type="radio" name="c2" value="0"> A. Resistance</label>
+    <label><input type="radio" name="c2" value="0"> B. Frequency only</label>
+    <label><input type="radio" name="c2" value="1"> C. Duty cycle</label>
+    <label><input type="radio" name="c2" value="0"> D. Power factor</label>
+  </div>
+  <div class="q">
+    <p><b>Q3. A buck chopper has Vin = 200 V and D = 0.4. What is Vo(avg)?</b></p>
+    <label><input type="radio" name="c3" value="0"> A. 40 V</label>
+    <label><input type="radio" name="c3" value="1"> B. 80 V</label>
+    <label><input type="radio" name="c3" value="0"> C. 120 V</label>
+    <label><input type="radio" name="c3" value="0"> D. 200 V</label>
+  </div>
+  <div class="q">
+    <p><b>Q4. Which statement correctly describes a boost chopper?</b></p>
+    <label><input type="radio" name="c4" value="0"> A. Output voltage is always lower than input</label>
+    <label><input type="radio" name="c4" value="0"> B. Output voltage is always equal to input</label>
+    <label><input type="radio" name="c4" value="1"> C. Output voltage can be higher than input</label>
+    <label><input type="radio" name="c4" value="0"> D. It converts DC to AC</label>
+  </div>
+  <div class="q">
+    <p><b>Q5. In a buck chopper, what happens when duty cycle increases while Vin remains constant?</b></p>
+    <label><input type="radio" name="c5" value="0"> A. Average output voltage decreases</label>
+    <label><input type="radio" name="c5" value="0"> B. Average output voltage remains unchanged</label>
+    <label><input type="radio" name="c5" value="1"> C. Average output voltage increases</label>
+    <label><input type="radio" name="c5" value="0"> D. Output voltage becomes zero</label>
+  </div>
+  <button onclick="checkQuiz()">SUBMIT CHECK</button><p id="quizMsg" class="muted"></p>`;
+ else if(idx===8) body=`
+  <h2>REFLECT</h2>
+  <p class="muted">Take 2 minutes to think about what you understand and what still needs clarification.</p>
+  <div class="q"><p><b>1. In your own words, explain how changing the duty cycle affects the average output voltage of a buck chopper.</b></p><input id="ref" type="text" placeholder="Write a short explanation..."></div>
+  <div class="q"><p><b>2. Which part of DC Chopper is still unclear to you?</b></p>
+   <label><input type="radio" name="difficulty" value="Switching & ON/OFF operation"> Switching & ON/OFF operation</label>
+   <label><input type="radio" name="difficulty" value="Duty cycle"> Duty cycle</label>
+   <label><input type="radio" name="difficulty" value="Buck chopper"> Buck chopper</label>
+   <label><input type="radio" name="difficulty" value="Boost chopper"> Boost chopper</label>
+   <label><input type="radio" name="difficulty" value="Calculation"> Calculation</label>
+   <label><input type="radio" name="difficulty" value="I understand all topics"> I understand all topics</label>
+  </div>
+  <div class="q"><p><b>3. How effective was this app in helping you learn DC Chopper?</b></p>
+   <label><input type="radio" name="effectiveness" value="5"> 5 — Very effective</label>
+   <label><input type="radio" name="effectiveness" value="4"> 4 — Effective</label>
+   <label><input type="radio" name="effectiveness" value="3"> 3 — Moderately effective</label>
+   <label><input type="radio" name="effectiveness" value="2"> 2 — Slightly effective</label>
+   <label><input type="radio" name="effectiveness" value="1"> 1 — Not effective</label>
+  </div>
+  <div class="q"><p><b>4. What would you improve about this learning app?</b></p><input id="improve" type="text" placeholder="Optional suggestion..."></div>
+  <button onclick="reflection()">SUBMIT REFLECTION</button><p id="refMsg" class="muted"></p>`;
+ else body=`
+  <h2>WRAP UP</h2>
+  <p class="muted">Complete this 2-minute exit ticket to summarise your learning and prepare for the next synchronous session.</p>
+  <div class="notice"><b>Key Takeaways</b><br>• A DC chopper controls DC output voltage through high-frequency switching.<br>• Duty cycle determines the ON-time of the switch.<br>• For an ideal buck chopper: <b>Vo(avg) = D × Vin</b>.<br>• Buck steps down voltage; boost steps up voltage.</div>
+  <div class="q"><p><b>1. Today I learned that...</b></p><input id="wraptake" type="text" placeholder="Complete this sentence in your own words..."></div>
+  <div class="q"><p><b>2. Write ONE question you would like to discuss during the next synchronous session.</b></p><input id="wrapq" type="text" placeholder="Your question for the lecturer..."></div>
+  <div class="q"><label><input id="wrapNoQ" type="checkbox" onchange="toggleWrapQuestion()"> I have no further questions at this time.</label></div>
+  <button onclick="wrapDone()">SAVE & COMPLETE TASK</button><p id="wrapMsg" class="muted"></p>`;
+
+ c.innerHTML=body+`<hr style="border-color:#203852;margin:24px 0">
+ <div class="muted">Allocated time: ${a.mins} minutes</div>
+ <div id="timer" class="timer">--:--</div>
+ <div class="notice"><b>Completion rule:</b> You can move to the next activity only when the task is completed AND the timer reaches 00:00.</div>
+ <div class="actions">
+   <button id="skipBtn" class="secondary" style="display:none" onclick="skipTimer()">⏩ SKIP TIMER</button>
+   <button id="completeBtn" class="green" onclick="complete()" disabled>COMPLETE & UNLOCK NEXT</button>
+</div>`;
+ updateTimer();
+ const slider=document.getElementById('dutySlider');
+ if(slider) updateExplorer();
+ drawDutyWave();
+ clearInterval(waveTimer);
+ waveTimer=setInterval(animateWave,60);
+ const skip=document.getElementById('skipBtn');
+ if(skip)skip.style.display=testMode?'inline-block':'none';
+}
+function updateWatchTask(){
+  const status=document.getElementById('taskStatus');
+  if(!status)return;
+  const total=document.querySelectorAll('[id^="scMsg"]').length;
+  const correct=selfCheckState.filter(Boolean).length;
+  const video=videoOpened?'Video opened ✓':'Video not opened';
+  const check=correct===total && total>0?'All Self-Check correct ✓':`Self-Check ${correct}/${total}`;
+  status.textContent=`TASK: ${video} • ${check} • Timer must reach 00:00`;
+}
+function openWatchVideo(){
+  videoOpened=true;
+  const s=document.getElementById('videoStatus');
+  if(s)s.textContent='VIDEO OPENED ✓';
+  updateWatchTask();
+}
+function checkWatchAnswer(qIndex, selected, answer, total){
+  const msg=document.getElementById('scMsg'+qIndex);
+  if(selected===answer){
+    selfCheckState[qIndex]=true;
+    msg.textContent='Correct ✓';
+    msg.style.color='#55d89c';
+  }else{
+    selfCheckState[qIndex]=false;
+    msg.textContent='Not correct — review the video and try again.';
+    msg.style.color='#ff9a9a';
+  }
+  const correct=selfCheckState.filter(Boolean).length;
+  const status=document.getElementById('checkStatus');
+  if(status)status.textContent=`SELF-CHECK: ${correct} / ${total} CORRECT`;
+  taskDone=(videoOpened && correct===total);
+  updateWatchTask();
+  updateTimer();
+}
+let waveTimer=null;
+let waveRunning=true;
+let wavePhase=0;
+
+function drawDutyWave(){
+  const slider=document.getElementById('dutySlider');
+  const wave=document.getElementById('squareWave');
+  const tonBracket=document.getElementById('tonBracket');
+  const toffBracket=document.getElementById('toffBracket');
+  const tonLabel=document.getElementById('tonLabel');
+  const toffLabel=document.getElementById('toffLabel');
+  if(!slider || !wave) return;
+
+  const d=Math.max(20, Math.min(80, Number(slider.value)))/100;
+  const x0=45, x1=665, width=x1-x0;
+  const split=x0 + width*d;
+
+  // One complete period: TON width follows D, TOFF uses the remainder.
+  const path=`M ${x0} 135 L ${x0} 45 L ${split} 45 L ${split} 135 L ${x1} 135`;
+  wave.setAttribute('d',path);
+
+  tonBracket.setAttribute('x1',x0);
+  tonBracket.setAttribute('x2',split);
+  toffBracket.setAttribute('x1',split);
+  toffBracket.setAttribute('x2',x1);
+
+  tonLabel.setAttribute('x',(x0+split)/2);
+  toffLabel.setAttribute('x',(split+x1)/2);
+  tonLabel.textContent=`TON = ${Math.round(d*100)}% T`;
+  toffLabel.textContent=`TOFF = ${Math.round((1-d)*100)}% T`;
+}
+
+function animateWave(){
+  const slider=document.getElementById('dutySlider');
+  const cursor=document.getElementById('waveCursor');
+  const state=document.getElementById('switchState');
+  if(!slider || !cursor || !state) return;
+
+  const d=Math.max(20, Math.min(80, Number(slider.value)))/100;
+  const left=45, right=665, width=right-left;
+  wavePhase=(wavePhase+0.01)%1;
+
+  const x=left + width*wavePhase;
+  cursor.setAttribute('x1',x);
+  cursor.setAttribute('x2',x);
+
+  const on=wavePhase < d;
+  state.textContent=on ? 'SWITCH: ON' : 'SWITCH: OFF';
+  state.style.color=on ? '#55d89c' : '#4eb5ff';
+}
+
+function toggleWave(){
+  waveRunning=!waveRunning;
+  const b=document.getElementById('waveBtn');
+  if(waveRunning){
+    b.textContent='⏸ PAUSE';
+    clearInterval(waveTimer);
+    waveTimer=setInterval(animateWave,40);
+  }else{
+    b.textContent='▶ PLAY';
+    clearInterval(waveTimer);
+  }
+}
+
+function updateExplorer(){
+  const s=document.getElementById('dutySlider');
+  const d=Number(s.value);
+  const vo=d;
+  document.getElementById('dutyValue').textContent='D = '+d+'%';
+  document.getElementById('exploreVo').textContent=vo+' V';
+  document.getElementById('exploreObservation').textContent =
+    d>50 ? 'Duty cycle increased → TON becomes longer and average output voltage increases.' :
+    d<50 ? 'Duty cycle decreased → TON becomes shorter and average output voltage decreases.' :
+           'At D = 50%, TON and TOFF are equal.';
+  drawDutyWave();
+}
+function checkExploreChallenge(){
+  const selected=document.querySelector('input[name="exploreChallenge"]:checked');
+  const m=document.getElementById('exploreStatus');
+  if(selected && selected.value==='1'){
+    m.textContent='QUICK CHALLENGE CORRECT ✓';
+    m.style.color='#55d89c';
+    taskDone=true;
+    document.getElementById('taskStatus').textContent='TASK: Explorer used ✓ • Challenge correct ✓ • Timer must reach 00:00';
+  }else{
+    m.textContent='Not correct. Think about Vo = D × Vin.';
+    m.style.color='#ff9a9a';
+    taskDone=false;
+  }
+  updateTimer();
+}
+function checkCalcLevel(level){
+ const answers={1:[40],2:[60],3:[60,120,60]};
+ const ids={1:['calc1'],2:['calc2'],3:['calc3a','calc3b','calc3c']}[level];
+ const vals=ids.map(id=>parseFloat(document.getElementById(id).value));
+ const ok=vals.every((v,i)=>Number.isFinite(v)&&Math.abs(v-answers[level][i])<0.01);
+ const m=document.getElementById('calcMsg'+level);
+ if(ok){m.textContent='Correct ✓';m.style.color='#55d89c';}
+ else{m.textContent='Try again. Check the formula and your calculation.';m.style.color='#ff9a9a';}
+ const all=[1,2,3].every(n=>{
+   const el=document.getElementById('calcMsg'+n);
+   return el && el.textContent.includes('Correct');
+ });
+ if(all)markTask();
+}
+function checkQuiz(){
+ const names=['c1','c2','c3','c4','c5'];
+ const selected=names.map(n=>document.querySelector('input[name="'+n+'"]:checked'));
+ const m=document.getElementById('quizMsg');
+ if(selected.some(x=>!x)){m.textContent='Please answer all 5 questions before submitting.';m.style.color='#ffcc66';return;}
+ const score=selected.reduce((sum,x)=>sum+(x.value==='1'?1:0),0);
+ localStorage.setItem('dcChopperScore',score+'/5'); if(score>=4){m.innerHTML='<b>Score: '+score+'/5 — PASSED ✓</b><br>You understand the key concepts of DC choppers. Review any incorrect answers before moving to REFLECT.';m.style.color='#55d89c';markTask();}
+ else{m.innerHTML='<b>Score: '+score+'/5 — NOT YET</b><br>Review the WATCH and EXPLORE sections, then try again. You need at least 4/5 to pass.';m.style.color='#ff9a9a';taskDone=false;}
+ updateTimer();
+}
+function reflection(){
+ const answer=document.getElementById('ref')?.value.trim();
+ const difficulty=document.querySelector('input[name="difficulty"]:checked')?.value;
+ const effectiveness=document.querySelector('input[name="effectiveness"]:checked')?.value;
+ const improve=document.getElementById('improve')?.value.trim()||'';
+ const msg=document.getElementById('refMsg');
+ if(answer && difficulty && effectiveness){
+   const data={reflection:answer,difficulty,effectiveness:Number(effectiveness),improve,timestamp:new Date().toLocaleString()};
+   localStorage.setItem('dcChopperReflection',JSON.stringify(data));
+   msg.textContent='Reflection & app feedback saved ✓';msg.style.color='#55d89c';markTask();
+ } else {msg.textContent='Please answer Questions 1–3 before submitting.';msg.style.color='#ffcc66';}
+}
+function openDashboard(){
+ const d=JSON.parse(localStorage.getItem('dcChopperReflection')||'null');
+ const w=JSON.parse(localStorage.getItem('dcChopperWrap')||'null');
+ const completed=done.filter(Boolean).length;
+ const scoreText=localStorage.getItem('dcChopperScore')||'Not submitted';
+ document.getElementById('dashContent').innerHTML=`
+ <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+  <div class="card"><div class="muted">Activities Completed</div><h2>${completed}/10</h2></div>
+  <div class="card"><div class="muted">CHECK Score</div><h2>${scoreText}</h2></div>
+  <div class="card"><div class="muted">App Effectiveness</div><h2>${d?d.effectiveness+'/5':'—'}</h2></div>
+  <div class="card"><div class="muted">Main Difficulty</div><h3>${d?d.difficulty:'—'}</h3></div>
+ </div>
+ <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:15px">
+  <div class="card"><h3>Student Reflection</h3><p>${d?d.reflection:'No reflection submitted yet.'}</p><h3>Improvement Suggestion</h3><p>${d?.improve||'No suggestion submitted.'}</p><hr style="border-color:#203852"><h3>Exit Ticket — Key Takeaway</h3><p>${w?.takeaway||'No exit ticket submitted yet.'}</p><h3>Question for Next Sync</h3><p>${w?.question||'No question submitted yet.'}</p></div>
+  <div class="card"><h3>Learning Progress</h3><p>Roadmap completion: <b>${Math.round(completed/10*100)}%</b></p><div class="progress"><div class="bar" style="width:${completed/10*100}%"></div></div><p class="muted">Lecturer view for this device. Shared class data is collected in Google Sheet via SAVE MY RESULT.</p></div>
+ </div>`;
+ document.getElementById('dashboard').style.display='block';
+}
+function closeDashboard(){document.getElementById('dashboard').style.display='none'}
+function toggleWrapQuestion(){
+ const cb=document.getElementById('wrapNoQ'); const q=document.getElementById('wrapq');
+ if(cb&&q){q.disabled=cb.checked;if(cb.checked) q.value='I have no further questions at this time.';else q.value='';}
+}
+function wrapDone(){
+ const takeaway=document.getElementById('wraptake')?.value.trim();
+ const q=document.getElementById('wrapq')?.value.trim();
+ const msg=document.getElementById('wrapMsg');
+ if(takeaway && q){
+   localStorage.setItem('dcChopperWrap',JSON.stringify({takeaway,question:q,timestamp:new Date().toLocaleString()}));
+   msg.textContent='Exit ticket saved ✓';msg.style.color='#55d89c';markTask();
+ } else {msg.textContent='Please complete both exit-ticket items before submitting.';msg.style.color='#ffcc66';}
+}
+render();
+loadStudentSession();
+if(!sessionStarted) updateTimer(); else { render(); resetTimer(); }
+</script>
+</body>
+</html>
