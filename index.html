@@ -111,19 +111,76 @@ const LECTURER_PASSWORD='085195';
 // Paste your deployed Google Apps Script Web App URL here after Step 2.
 const DATA_ENDPOINT='https://script.google.com/macros/s/AKfycbyj6UmDtX3G245bcKxyCWzn9rXAFZWfB9m3DZ3XMGlue96CuP8q0W1S1OuyzGw-Jug/exec';
 
+function saveLearningState(){
+  if(!student.id) return;
+  localStorage.setItem('dcChopperLearningState', JSON.stringify({
+    studentId: student.id,
+    sessionStarted,
+    chapterCompleted,
+    idx,
+    done,
+    taskDone,
+    opened,
+    videoOpened,
+    timerStartedAt,
+    timerEndAt,
+    remain
+  }));
+}
+function restoreLearningState(){
+  const raw=localStorage.getItem('dcChopperLearningState');
+  if(!raw || !student.id) return false;
+  try{
+    const st=JSON.parse(raw);
+    if(st.studentId!==student.id) return false;
+    sessionStarted=!!st.sessionStarted;
+    chapterCompleted=!!st.chapterCompleted;
+    idx=Number.isInteger(st.idx)?Math.max(0,Math.min(activities.length-1,st.idx)):0;
+    done=Array.isArray(st.done)?st.done.slice(0,activities.length):Array(activities.length).fill(false);
+    while(done.length<activities.length) done.push(false);
+    taskDone=!!st.taskDone;
+    opened=!!st.opened;
+    videoOpened=!!st.videoOpened;
+    timerStartedAt=Number(st.timerStartedAt)||0;
+    timerEndAt=Number(st.timerEndAt)||0;
+    remain=Number(st.remain)||activities[idx].mins*60;
+    return sessionStarted;
+  }catch(e){ return false; }
+}
+function clearLearningState(){
+  localStorage.removeItem('dcChopperLearningState');
+  localStorage.removeItem('dcChopperReflection');
+  localStorage.removeItem('dcChopperWrap');
+  localStorage.removeItem('dcChopperScore');
+}
+
 function startStudentSession(){
   const id=document.getElementById('studentId').value.trim();
   const name=document.getElementById('studentName').value.trim();
   const className=document.getElementById('studentClass').value.trim();
   const msg=document.getElementById('studentStatus');
   if(!id||!name||!className){msg.textContent='Please complete Student ID, Name and Class.';msg.style.color='#ffcc66';return;}
-  student={id,name,className,startedAt:new Date().toISOString()};
+  const previous=JSON.parse(localStorage.getItem('dcChopperStudent')||'null');
+  const sameStudent=previous && previous.id===id;
+  student={id,name,className,startedAt:(sameStudent&&previous.startedAt)?previous.startedAt:new Date().toISOString()};
   localStorage.setItem('dcChopperStudent',JSON.stringify(student));
-  msg.textContent='Profile saved ✓';msg.style.color='#55d89c';
-  sessionStarted=true;
-  idx=0; done=Array(activities.length).fill(false); chapterCompleted=false;
-  render();
-  resetTimer();
+  const resumed=restoreLearningState();
+  msg.textContent=resumed?'Progress restored ✓ — continuing where you left off.':'Profile saved ✓ — Chapter 4 is ready to start.';msg.style.color='#55d89c';
+  if(!resumed){
+    sessionStarted=true;
+    idx=0; done=Array(activities.length).fill(false); chapterCompleted=false;
+    taskDone=false; opened=false; videoOpened=false; timerStartedAt=0; timerEndAt=0;
+    render();
+    resetTimer();
+  }else{
+    render();
+    if(timerEndAt>0){
+      updateTimer();
+      clearInterval(interval);
+      interval=setInterval(updateTimer,250);
+    }
+  }
+  saveLearningState();
   document.getElementById('studentId').disabled=true;
   document.getElementById('studentName').disabled=true;
   document.getElementById('studentClass').disabled=true;
@@ -131,13 +188,18 @@ function startStudentSession(){
 function loadStudentSession(){
   const saved=JSON.parse(localStorage.getItem('dcChopperStudent')||'null');
   if(!saved)return;
-  // Load the saved profile for convenience, but DO NOT start the chapter/timer automatically.
-  sessionStarted=false;
   student=saved;
-  ['studentId','studentName','studentClass'].forEach((id,i)=>{const el=document.getElementById(id);if(el){el.value=[student.id,student.name,student.className][i];el.disabled=false;}});
-  const msg=document.getElementById('studentStatus');if(msg){msg.textContent='Profile loaded ✓ — press START CHAPTER 4 to begin the timer.';msg.style.color='#55d89c';}
+  const resumed=restoreLearningState();
+  ['studentId','studentName','studentClass'].forEach((id,i)=>{const el=document.getElementById(id);if(el){el.value=[student.id,student.name,student.className][i];el.disabled=!!resumed;}});
+  const msg=document.getElementById('studentStatus');if(msg){msg.textContent=resumed?'Progress restored ✓ — your previous session will continue automatically.':'Profile loaded ✓ — press START CHAPTER 4 to begin the timer.';msg.style.color='#55d89c';}
   const startBtn=document.querySelector('button[onclick="startStudentSession()"]');
   if(startBtn) startBtn.disabled=false;
+  if(resumed){
+    render();
+    clearInterval(interval);
+    interval=setInterval(updateTimer,250);
+    updateTimer();
+  }
 }
 function buildStudentRecord(){
   const reflection=JSON.parse(localStorage.getItem('dcChopperReflection')||'null');
@@ -221,6 +283,7 @@ function skipTimer(){
   if(!testMode)return;
   timerEndAt=Date.now();
   remain=0;
+  saveLearningState();
   updateTimer();
 }
 
@@ -245,6 +308,7 @@ function resetTimer(){
  taskDone=false; opened=false; videoOpened=false; selfCheckState=[];
  updateTimer();
  interval=setInterval(updateTimer,250);
+ saveLearningState();
 }
 function syncTimer(){
  if(!sessionStarted || !timerEndAt)return;
@@ -277,12 +341,14 @@ function markTask(){
   opened=true;
   const s=document.getElementById('taskStatus');
   if(s) s.textContent='TASK COMPLETED ✓';
+  saveLearningState();
   updateTimer();
 }
 function complete(){
  if(!sessionStarted||chapterCompleted)return;
  if(gateEnabled && (remain!==0||!taskDone))return;
  done[idx]=true;
+ saveLearningState();
  if(idx<activities.length-1){
    idx++;
    render();
@@ -813,7 +879,8 @@ function wrapDone(){
 }
 render();
 loadStudentSession();
-if(!sessionStarted) updateTimer(); else { render(); resetTimer(); }
+if(!sessionStarted) updateTimer();
+else { render(); updateTimer(); clearInterval(interval); interval=setInterval(updateTimer,250); }
 </script>
 </body>
 </html>
