@@ -84,7 +84,7 @@ const activities=[
   {id:'start',title:'START HERE',mins:3},
  {id:'watch1',title:'WATCH 1 • Introduction to Choppers',mins:10},
  {id:'watch2',title:'WATCH 2 • Chopper Control Techniques',mins:10},
- {id:'watch3',title:'WATCH 3 • Principle of Step Down Chopper',mins:10},
+ {id:'watch3',title:'WATCH 3 • Principle of Step Down Chopper 1',mins:10},
  {id:'watch4',title:'WATCH 4 • Principle of Step Up Chopper',mins:10},
  {id:'explore',title:'EXPLORE',mins:5},
  {id:'calc',title:'CALCULATE',mins:5},
@@ -95,8 +95,8 @@ const activities=[
 const videos={
 watch1:['Introduction to Choppers','https://www.youtube.com/watch?v=7YWlqJn1i-4','What is a DC chopper? How does switching control the average DC output?'],
 watch2:['Chopper Control Techniques','https://www.youtube.com/watch?v=gZfUpLEk2rY','What is duty cycle and how is it related to TON and TOFF?'],
-watch3:['Principle of Step Down Chopper','https://www.youtube.com/watch?v=YRtExI37dt0','For a buck chopper, what happens to average output voltage when duty cycle increases?'],
-watch4:['Principle of Step Up Chopper','https://www.youtube.com/watch?v=D3Td9v1fezc','How does a boost chopper produce an output voltage greater than the input?']
+watch3:['Principle of Step Down Chopper 1','https://www.youtube.com/watch?v=YRtExI37dt0','For a buck chopper, what happens to average output voltage when duty cycle increases?'],
+watch4:['Principle of Step Down Chopper 2','https://www.youtube.com/watch?v=vQtKPedhi84','How do the switch, load voltage and freewheeling path operate during ON and OFF?']
 };
 let idx=0, remain=activities[0].mins*60, taskDone=false, opened=false, videoOpened=false, interval=null, timerStartedAt=0, timerEndAt=0;
 let selfCheckState=[];
@@ -398,7 +398,7 @@ function render(){
   <div class="notice" style="line-height:1.65">
     <h3 style="margin-top:0">📘 Chapter Introduction</h3>
     <p>A <b>DC chopper</b> is a power electronic circuit used to control the average DC output voltage from a fixed DC source. It achieves this by switching a semiconductor device rapidly between <b>ON</b> and <b>OFF</b> states.</p>
-    <p>In this chapter, you will explore how <b>switching</b> and <b>duty cycle</b> affect the output voltage, and you will be introduced to <b>Buck, Boost and Buck-Boost</b> chopper configurations.</p>
+    <p>In this chapter, you will focus on the <b>Buck (Step-Down) Chopper</b>, including switching operation, duty cycle, output voltage and basic calculation.</p>
   </div>
   <div class="card" style="margin-top:16px">
     <h3>🎯 Learning Outcomes</h3>
@@ -406,7 +406,7 @@ function render(){
     <ul style="line-height:1.8;margin-bottom:0">
       <li>Explain the operating principle of a DC chopper.</li>
       <li>Explain the relationship between switching and duty cycle.</li>
-      <li>Identify Buck, Boost and Buck-Boost chopper configurations.</li>
+      <li>Explain the operating principle of a Buck (Step-Down) Chopper.</li>
       <li>Calculate duty cycle and average output voltage for a simple chopper.</li>
     </ul>
   </div>
@@ -462,17 +462,18 @@ function render(){
     },
     watch4:{
       qs:[
-        'How does a boost chopper produce an output voltage higher than the input?',
-        'What happens to the inductor during the ON period?',
-        'What happens when the switch is OFF?',
-        'What happens to output voltage when duty cycle increases?'
+        'What happens to the load voltage during the ON period of a buck chopper?',
+        'What happens to the load current during the OFF period when the freewheeling path conducts?',
+        'Why is the output voltage of a buck chopper lower than the input voltage?',
+        'How does the output waveform relate to the switching signal?'
       ],
       checks:[
-        {q:'A boost chopper is mainly used to:',c:['Step down DC voltage','Step up DC voltage','Convert DC to AC','Convert AC to DC'],a:1},
-        {q:'During the ON period, the inductor mainly:',c:['Stores energy','Stops all current permanently','Converts DC to AC','Removes the load'],a:0},
-        {q:'When the switch is OFF, stored inductor energy is:',c:['Transferred toward the output','Destroyed','Converted into AC frequency','Disconnected from the circuit permanently'],a:0},
-        {q:'For an ideal boost converter, increasing D generally:',c:['Decreases output voltage','Increases output voltage','Makes output equal to zero','Has no effect'],a:1}
+        {q:'During the ON period of an ideal buck chopper, the load voltage is approximately:',c:['Equal to Vin','Equal to zero always','Greater than Vin','An AC voltage'],a:0},
+        {q:'During the OFF period, the load current in a typical inductive-load buck chopper can continue through the:',c:['Freewheeling path','AC mains','Transformer primary only','Open switch only'],a:0},
+        {q:'Why is the average output voltage lower than Vin?',c:['The switch is ON for only part of each period','The input voltage changes polarity','The load creates AC','The switching frequency is zero'],a:0},
+        {q:'The buck chopper output voltage waveform is mainly determined by the switch being:',c:['Only ON','Only OFF','ON and OFF periodically','Permanently shorted'],a:2}
       ]
+
     }
   }[a.id];
 
@@ -541,8 +542,8 @@ function render(){
   </div>
 
   <div class="notice">
-    <b>3️⃣ BUCK vs BOOST</b><br>
-    Compare the input and output voltage.
+    <b>3️⃣ BUCK CHOPPER RELATIONSHIP</b><br>
+    Observe how duty cycle determines the average output voltage of a buck chopper.
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
     <div class="card" style="background:#081522">
@@ -624,7 +625,7 @@ function render(){
     <label><input type="radio" name="c3" value="0"> D. 200 V</label>
   </div>
   <div class="q">
-    <p><b>Q4. Which statement correctly describes a boost chopper?</b></p>
+    <p><b>Q4. Which statement correctly describes a buck chopper?</b></p>
     <label><input type="radio" name="c4" value="0"> A. Output voltage is always lower than input</label>
     <label><input type="radio" name="c4" value="0"> B. Output voltage is always equal to input</label>
     <label><input type="radio" name="c4" value="1"> C. Output voltage can be higher than input</label>
@@ -646,8 +647,7 @@ function render(){
    <label><input type="radio" name="difficulty" value="Switching & ON/OFF operation"> Switching & ON/OFF operation</label>
    <label><input type="radio" name="difficulty" value="Duty cycle"> Duty cycle</label>
    <label><input type="radio" name="difficulty" value="Buck chopper"> Buck chopper</label>
-   <label><input type="radio" name="difficulty" value="Boost chopper"> Boost chopper</label>
-   <label><input type="radio" name="difficulty" value="Calculation"> Calculation</label>
+   <label><input type="radio" name="difficulty"    <label><input type="radio" name="difficulty" value="Calculation"> Calculation</label>
    <label><input type="radio" name="difficulty" value="I understand all topics"> I understand all topics</label>
   </div>
   <div class="q"><p><b>3. How effective was this app in helping you learn DC Chopper?</b></p>
@@ -662,7 +662,7 @@ function render(){
  else body=`
   <h2>WRAP UP</h2>
   <p class="muted">Complete this 2-minute exit ticket to summarise your learning and prepare for the next synchronous session.</p>
-  <div class="notice"><b>Key Takeaways</b><br>• A DC chopper controls DC output voltage through high-frequency switching.<br>• Duty cycle determines the ON-time of the switch.<br>• For an ideal buck chopper: <b>Vo(avg) = D × Vin</b>.<br>• Buck steps down voltage; boost steps up voltage.</div>
+  <div class="notice"><b>Key Takeaways</b><br>• A DC chopper controls DC output voltage through high-frequency switching.<br>• Duty cycle determines the ON-time of the switch.<br>• For an ideal buck chopper: <b>Vo(avg) = D × Vin</b>.<br>• Increasing duty cycle increases the average output voltage when Vin is constant.</div>
   <div class="q"><p><b>1. Today I learned that...</b></p><input id="wraptake" type="text" placeholder="Complete this sentence in your own words..."></div>
   <div class="q"><p><b>2. Write ONE question you would like to discuss during the next synchronous session.</b></p><input id="wrapq" type="text" placeholder="Your question for the lecturer..."></div>
   <div class="q"><label><input id="wrapNoQ" type="checkbox" onchange="toggleWrapQuestion()"> I have no further questions at this time.</label></div>
